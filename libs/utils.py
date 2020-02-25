@@ -1,13 +1,19 @@
+import numpy as np
 from PIL import Image, ImageDraw
 
+#convert PIL image to numpy array
+def image_to_array(image):
+    array = np.asarray(image)
+    return np.array(array / 255.0)
+
 #find strongly connected components with the mask color
-def find_regions(image):
+def find_regions(image, mask_color):
     pixel = image.load()
     neighbors = dict()
     width, height = image.size
     for x in range(width):
         for y in range(height):
-            if is_green(pixel[x,y]):
+            if is_right_color(pixel[x,y], *mask_color):
                 neighbors[x, y] = {(x,y)}
     for x, y in neighbors:
         candidates = (x + 1, y), (x, y + 1)
@@ -35,7 +41,7 @@ def find_regions(image):
     return regions
 
 # risk of box being bigger than the image
-def expand_bounding(img, region, expand_factor=1.5, min_size = 256, max_size=512):
+def expand_bounding(img, region, expand_factor=1.5, min_size = 256):
     #expand bounding box to capture more context
     x, y = zip(*region)
     min_x, min_y, max_x, max_y = min(x), min(y), max(x), max(y)
@@ -48,6 +54,7 @@ def expand_bounding(img, region, expand_factor=1.5, min_size = 256, max_size=512
     y_center = (min_y + max_y)//2
     current_size = max(bb_width, bb_height)
     current_size  = int(current_size * expand_factor)
+    max_size = min(width, height)
     if current_size > max_size:
         current_size = max_size
     elif current_size < min_size:
@@ -115,14 +122,14 @@ def expand_bounding(img, region, expand_factor=1.5, min_size = 256, max_size=512
         x1_square, y1_square, x2_square, y2_square = min_x, min_y, max_x, max_y
     return x1_square, y1_square, x2_square, y2_square
 
-def is_green(pixel):
-    r, g, b = pixel
-    return r == 0 and g == 255 and b == 0
+def is_right_color(pixel, r2, g2, b2):
+    r1, g1, b1 = pixel
+    return r1 == r2 and g1 == g2 and b1 == b2
 
 if __name__ == '__main__':
     image = Image.open('')
     no_alpha_image = image.convert('RGB')
     draw = ImageDraw.Draw(no_alpha_image)
-    for region in find_regions(no_alpha_image):
+    for region in find_regions(no_alpha_image, [0,255,0]):
         draw.rectangle(expand_bounding(no_alpha_image, region), outline=(0, 255, 0))
     no_alpha_image.show()
